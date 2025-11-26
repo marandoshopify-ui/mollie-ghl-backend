@@ -6,8 +6,15 @@ const bodyParser = require("body-parser");
 const app = express();
 const port = process.env.PORT || 3000;
 
-// ⬇️ METTI QUI LA TUA MOLLIE API KEY DI TEST (poi live_)
+// ⬇️ METTI QUI LA TUA MOLLIE API KEY (test_ per test, live_ per produzione)
 const MOLLIE_API_KEY = "test_mAp53HbnD6hcPuze3bNtu7qBNjSHst";
+
+// Listino servizi (CODICE -> nome + prezzo)
+const SERVICES = {
+  setup: { name: "Setup Funnel", price: "97.00" },
+  ads:   { name: "Gestione ADV", price: "197.00" },
+  call:  { name: "Consulenza 1:1", price: "297.00" }
+};
 
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -15,19 +22,42 @@ app.use(bodyParser.json());
 
 app.post("/create-payment", async (req, res) => {
   try {
-    const plan = req.body.plan || "TEST";
-    const amount = req.body.amount || "10.00";
+    const selectedServices = req.body.services || []; // array di codici: ["setup","ads"]
+
+    if (!Array.isArray(selectedServices) || selectedServices.length === 0) {
+      return res.status(400).json({ error: true, message: "Nessun servizio selezionato" });
+    }
+
+    // Calcolo totale lato server
+    let total = 0;
+    const serviceNames = [];
+
+    for (const code of selectedServices) {
+      const srv = SERVICES[code];
+      if (!srv) continue; // se arriva qualcosa di strano lo ignoro
+
+      total += parseFloat(srv.price);
+      serviceNames.push(srv.name);
+    }
+
+    if (serviceNames.length === 0) {
+      return res.status(400).json({ error: true, message: "Servizi non validi" });
+    }
+
+    const amount = total.toFixed(2); // es: "394.00"
+    const planDescription = serviceNames.join(", ");
 
     const payload = {
       amount: {
         currency: "EUR",
         value: amount
       },
-      description: `Pagamento piano ${plan} da GHL`,
-      redirectUrl: "https://google.com",
-      webhookUrl: "https://example.com/webhook-mollie",
+      description: `Pagamento servizi: ${planDescription}`,
+      redirectUrl: "https://google.com", // TODO: metti la tua thank-you page GHL
+      webhookUrl: "https://example.com/webhook-mollie", // opzionale
       metadata: {
-        plan,
+        services: selectedServices,
+        serviceNames,
         source: "GHL"
       }
     };
@@ -55,9 +85,4 @@ app.post("/create-payment", async (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("Mollie-GHL backend è attivo 🚀");
-});
-
-app.listen(port, () => {
-  console.log(`Server in ascolto sulla porta ${port}`);
-});
+  res.send("Mollie-GHL backend è a
