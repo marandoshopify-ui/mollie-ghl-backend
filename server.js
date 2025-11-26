@@ -85,4 +85,9 @@ app.post("/create-payment", async (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("Mollie-GHL backend è a
+  res.send("Mollie-GHL backend è attivo 🚀");
+});
+
+app.listen(port, () => {
+  console.log(`Server in ascolto sulla porta ${port}`);
+});
