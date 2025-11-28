@@ -7,7 +7,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // ⬇️ METTI QUI LA TUA MOLLIE API KEY (test_ per test, live_ per produzione)
-const MOLLIE_API_KEY = "live_NGaGAeDNNvUKuxWJPdpACEj77FQqta";
+const MOLLIE_API_KEY = "test_VF6ueTaFBBtR9NtUA74F4K2s35e8gj";
 
 // Webhook GHL (Inbound Webhook del workflow)
 const GHL_WEBHOOK_URL = "https://services.leadconnectorhq.com/hooks/PtmpyXxZAdcEhKIEw8cX/webhook-trigger/bde9a7a3-9f68-49c9-bc50-713c55303b2b";
