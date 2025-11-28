@@ -7,12 +7,12 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // ⬇️ METTI QUI LA TUA MOLLIE API KEY (test_ per test, live_ per produzione)
-const MOLLIE_API_KEY = "test_mAp53HbnD6hcPuze3bNtu7qBNjSHst";
+const MOLLIE_API_KEY = "test_VF6ueTaFBBtR9NtUA74F4K2s35e8gj";
 
 // Listino servizi (CODICE -> nome + prezzo)
 const SERVICES = {
-  setup: { name: "TikTok Shop MasterClass", price: “47.00" },
-  ads:   { name: "TOP 10 Prodotti – novembre", price: “9.90" },
+  setup: { name: "TikTok Shop MasterClass", price: "47.00" },
+  ads:   { name: "TOP 10 Prodotti - Dicembre", price: "9.90" },
   call:  { name: "Account TikTok Pre-Configurato", price: "19.90" }
 };
 
@@ -53,7 +53,7 @@ app.post("/create-payment", async (req, res) => {
         value: amount
       },
       description: `Pagamento servizi: ${planDescription}`,
-      redirectUrl: "https://google.com", // TODO: metti la tua thank-you page GHL
+      redirectUrl: "https://tiktok-boost.com/thank-you-page-page", // TODO: metti la tua thank-you page GHL
       webhookUrl: "https://example.com/webhook-mollie", // opzionale
       metadata: {
         services: selectedServices,
