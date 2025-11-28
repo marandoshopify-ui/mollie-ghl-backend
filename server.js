@@ -25,8 +25,9 @@ app.use(bodyParser.json());
 
 app.post("/create-payment", async (req, res) => {
   try {
-    // 👇 oltre ai servizi, prendiamo anche i dati utente dal body
-    const selectedServices = req.body.services || []; // array di codici: ["setup","ads"]
+    const selectedServices = req.body.services || []; // array di codici: ["setup","ads","call"]
+
+    // 👇 dati utente dal form (GHL)
     const name  = req.body.name  || "";
     const email = req.body.email || "";
     const phone = req.body.phone || "";
@@ -60,8 +61,8 @@ app.post("/create-payment", async (req, res) => {
         value: amount
       },
       description: `Pagamento servizi: ${planDescription}`,
-      redirectUrl: "https://tiktok-boost.com/thank-you-page-page", // TODO: metti la tua thank-you page GHL
-      // 👇 webhook che Mollie chiamerà quando cambia lo stato del pagamento
+      redirectUrl: "https://tiktok-boost.com/thank-you-page-page", // tua thank-you page GHL
+      // 👇 QUI Mollie chiamerà il tuo server quando cambia lo stato del pagamento
       webhookUrl: "https://mollie-ghl-backend.onrender.com/webhook-mollie",
       metadata: {
         services: selectedServices,
@@ -97,14 +98,14 @@ app.post("/create-payment", async (req, res) => {
   }
 });
 
-// 🔔 WEBHOOK CHIAMATO DA MOLLIE QUANDO CAMBIA LO STATO DEL PAGAMENTO
+// 🔔 WEBHOOK CHIAMATO DA MOLLIE QUANDO IL PAGAMENTO CAMBIA STATO
 app.post("/webhook-mollie", async (req, res) => {
   try {
-    const paymentId = req.body.id; // Mollie manda l'id del pagamento
+    const paymentId = req.body.id; // Mollie manda id=tr_xxx nel body (form-urlencoded)
 
     if (!paymentId) {
       console.error("Webhook Mollie senza payment id");
-      return res.sendStatus(400);
+      return res.status(400).send("Missing payment ID");
     }
 
     // Recuperiamo i dettagli del pagamento da Mollie
@@ -119,10 +120,10 @@ app.post("/webhook-mollie", async (req, res) => {
 
     const payment = mollieRes.data;
 
-    // Rispondiamo SUBITO a Mollie per non far andare in timeout
-    res.sendStatus(200);
+    // Rispondiamo SUBITO a Mollie (così non va in timeout)
+    res.send("ok");
 
-    // Ci interessa solo quando è pagato
+    // Ci interessa solo se è pagato
     if (payment.status !== "paid") {
       console.log("Pagamento non paid, status:", payment.status);
       return;
@@ -131,7 +132,7 @@ app.post("/webhook-mollie", async (req, res) => {
     const meta = payment.metadata || {};
     const user = meta.user || {};
 
-    // Costruiamo il payload da mandare a GHL
+    // Payload che inviamo al Webhook GHL
     const ghlPayload = {
       full_name: user.name || "",
       email: user.email || "",
@@ -143,7 +144,6 @@ app.post("/webhook-mollie", async (req, res) => {
       status: payment.status
     };
 
-    // Invio al webhook GHL
     try {
       await axios.post(GHL_WEBHOOK_URL, ghlPayload, {
         headers: { "Content-Type": "application/json" }
@@ -155,7 +155,7 @@ app.post("/webhook-mollie", async (req, res) => {
 
   } catch (err) {
     console.error("Errore nel webhook Mollie:", err.response?.data || err.message);
-    // Mollie ha già ricevuto 200 sopra, quindi ok
+    // Mollie ha già ricevuto "ok", quindi non serve altro
   }
 });
 
