@@ -11,9 +11,9 @@ const MOLLIE_API_KEY = "test_mAp53HbnD6hcPuze3bNtu7qBNjSHst";
 
 // Listino servizi (CODICE -> nome + prezzo)
 const SERVICES = {
-  setup: { name: "Setup Funnel", price: "97.00" },
-  ads:   { name: "Gestione ADV", price: "197.00" },
-  call:  { name: "Consulenza 1:1", price: "297.00" }
+  setup: { name: "TikTok Shop MasterClass", price: "47.00" },
+  ads:   { name: "TOP 10 Prodotti - Dicembre", price: "9.90" },
+  call:  { name: "Account TikTok Pre-Configurato", price: "19.90" }
 };
 
 app.use(cors());
