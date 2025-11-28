@@ -7,7 +7,7 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // ⬇️ METTI QUI LA TUA MOLLIE API KEY (test_ per test, live_ per produzione)
-const MOLLIE_API_KEY = "test_mAp53HbnD6hcPuze3bNtu7qBNjSHst";
+const MOLLIE_API_KEY = "live_NGaGAeDNNvUKuxWJPdpACEj77FQqta";
 
 // Listino servizi (CODICE -> nome + prezzo)
 const SERVICES = {
