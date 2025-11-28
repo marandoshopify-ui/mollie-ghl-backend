@@ -12,11 +12,10 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // ===== MOLLIE CLIENT =====
 const mollieClient = createMollieClient({
-  apiKey: "test_mAp53HbnD6hcPuze3bNtu7qBNjSHst"
+  apiKey: "test_mAp53HbnD6hcPuze3bNtu7qBNjSHst", // <<--- METTI QUI LA TUA CHIAVE LIVE
 });
 
 // ===== CONFIG SERVIZI =====
-// I prezzi "reali" sono QUI, non fidarti mai di quelli che arrivano dal browser
 const SERVICES = {
   setup: {
     name: "TikTok Shop MasterClass",
@@ -32,27 +31,24 @@ const SERVICES = {
   },
 };
 
-// ===== ROTTA DI TEST =====
-app.get("/", (req, res) => {
-  res.send("Mollie GHL backend attivo ✅");
-});
-
-// ===== CREA PAGAMENTO =====
+// ===== ROUTE CREA PAGAMENTO =====
 app.post("/create-payment", async (req, res) => {
   try {
-    const { services, name, email, phone } = req.body;
+    const selectedServices = req.body.services || [];
+    const user = req.body.user || {}; // nome, email, telefono
 
-    if (!Array.isArray(services) || services.length === 0) {
+    if (!Array.isArray(selectedServices) || selectedServices.length === 0) {
       return res.status(400).json({ error: true, message: "Nessun servizio selezionato" });
     }
 
-    // Calcolo totale e nomi servizi
+    // Somma prezzi lato server (sicuro)
     let total = 0;
-    const serviceNames = [];
+    let serviceNames = [];
 
-    for (const code of services) {
+    for (const code of selectedServices) {
       const srv = SERVICES[code];
       if (!srv) continue;
+
       total += parseFloat(srv.price);
       serviceNames.push(srv.name);
     }
@@ -61,87 +57,62 @@ app.post("/create-payment", async (req, res) => {
       return res.status(400).json({ error: true, message: "Servizi non validi" });
     }
 
-    const amount = total.toFixed(2); // es. "76.80"
-    const planDescription = serviceNames.join(", ");
+    const amount = total.toFixed(2);
+    const description = serviceNames.join(", ");
 
-    // Creazione pagamento Mollie
+    // CREA PAGAMENTO MOLLIE
     const payment = await mollieClient.payments.create({
       amount: {
-        value: amount,
         currency: "EUR",
+        value: amount,
       },
-      description: planDescription,
-      redirectUrl: process.env.MOLLIE_REDIRECT_URL,
-      webhookUrl: "https://mollie-ghl-backend.onrender.com/webhook-mollie",
+      description,
+      redirectUrl: "https://tiktok-boost.com/pagamento-completato",
+      webhookUrl: "https://mollie-ghl-backend.onrender.com/webhook", // IMPORTANTISSIMO
       metadata: {
-        services: serviceNames,
-        name,
-        email,
-        phone,
+        services: selectedServices,
+        user,
       },
     });
 
-    // Ritorniamo l'intero oggetto payment (contiene _links.checkout.href)
-    res.json(payment);
+    return res.json({ success: true, checkoutUrl: payment.getCheckoutUrl() });
+
   } catch (err) {
     console.error("Errore create-payment:", err);
-    res.status(500).json({ error: true, message: "Errore interno nella creazione del pagamento" });
+    return res.status(500).json({ error: true, message: "Errore creazione pagamento" });
   }
 });
 
-// ===== WEBHOOK MOLLIE -> GHL WEBHOOK =====
-app.post(
-  "/webhook-mollie",
-  express.urlencoded({ extended: false }),
-  async (req, res) => {
+// ===== WEBHOOK PAGAMENTO COMPLETATO =====
+app.post("/webhook", async (req, res) => {
+  try {
     const paymentId = req.body.id;
+    const payment = await mollieClient.payments.get(paymentId);
 
-    try {
-      // Recupera il pagamento da Mollie
-      const payment = await mollieClient.payments.get(paymentId);
+    if (payment.status === "paid") {
+      const meta = payment.metadata;
 
-      // Rispondiamo SUBITO a Mollie
-      res.status(200).send("ok");
-
-      if (payment.status !== "paid") {
-        return; // ci interessa solo quando è pagato
-      }
-
-      const meta = payment.metadata || {};
-
-      const payload = {
-        name: meta.name,
-        email: meta.email,
-        phone: meta.phone,
-        services: meta.services,
-        amount: payment.amount?.value,
-        currency: payment.amount?.currency,
-        mollieId: payment.id,
-        status: payment.status,
-      };
-
-      const ghlWebhookUrl = process.env.GHL_WEBHOOK_URL;
-
-      if (!ghlWebhookUrl) {
-        console.warn("https://services.leadconnectorhq.com/hooks/PtmpyXxZAdcEhKIEw8cX/webhook-trigger/bde9a7a3-9f68-49c9-bc50-713c55303b2b");
-        return;
-      }
-
-      // Invia i dati al webhook di GHL (Inbound Webhook del workflow)
-      await fetch(ghlWebhookUrl, {
+      // INVIA DATI A GHL TRAMITE WEBHOOK
+      await fetch("YOUR_GHL_WEBHOOK_URL_HERE", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          full_name: meta.user.full_name,
+          email: meta.user.email,
+          phone: meta.user.phone,
+          purchased_services: meta.services,
+          amount: payment.amount.value,
+        }),
       });
-    } catch (err) {
-      console.error("Errore nel webhook Mollie:", err);
-      // Mollie ha già ricevuto 200, quindi non serve altro
     }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error("Errore webhook:", err);
+    res.sendStatus(500);
   }
-);
+});
 
 // ===== AVVIO SERVER =====
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => {
-  console.log("Server in ascolto sulla porta", PORT);
-});
+app.listen(PORT, () => console.log("Server attivo sulla porta", PORT));
