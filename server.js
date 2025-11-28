@@ -1,53 +1,40 @@
 const express = require("express");
-const bodyParser = require("body-parser");
+const axios = require("axios");
 const cors = require("cors");
-const { createMollieClient } = require("@mollie/api-client");
+const bodyParser = require("body-parser");
 
 const app = express();
+const port = process.env.PORT || 3000;
 
-// ===== MIDDLEWARE =====
-app.use(cors());
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// ⬇️ METTI QUI LA TUA MOLLIE API KEY (test_ per test, live_ per produzione)
+const MOLLIE_API_KEY = "test_mAp53HbnD6hcPuze3bNtu7qBNjSHst";
 
-// ===== MOLLIE CLIENT =====
-const mollieClient = createMollieClient({
-  apiKey: "test_mAp53HbnD6hcPuze3bNtu7qBNjSHst", // <<--- METTI QUI LA TUA CHIAVE LIVE
-});
-
-// ===== CONFIG SERVIZI =====
+// Listino servizi (CODICE -> nome + prezzo)
 const SERVICES = {
-  setup: {
-    name: "TikTok Shop MasterClass",
-    price: "47.00",
-  },
-  ads: {
-    name: "TOP 10 Prodotti – novembre",
-    price: "9.90",
-  },
-  call: {
-    name: "Account TikTok Pre-Configurato",
-    price: "19.90",
-  },
+  setup: { name: "TikTok Shop MasterClass", price: “47.00" },
+  ads:   { name: "TOP 10 Prodotti – novembre", price: “9.90" },
+  call:  { name: "Account TikTok Pre-Configurato", price: "19.90" }
 };
 
-// ===== ROUTE CREA PAGAMENTO =====
+app.use(cors());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
+
 app.post("/create-payment", async (req, res) => {
   try {
-    const selectedServices = req.body.services || [];
-    const user = req.body.user || {}; // nome, email, telefono
+    const selectedServices = req.body.services || []; // array di codici: ["setup","ads"]
 
     if (!Array.isArray(selectedServices) || selectedServices.length === 0) {
       return res.status(400).json({ error: true, message: "Nessun servizio selezionato" });
     }
 
-    // Somma prezzi lato server (sicuro)
+    // Calcolo totale lato server
     let total = 0;
-    let serviceNames = [];
+    const serviceNames = [];
 
     for (const code of selectedServices) {
       const srv = SERVICES[code];
-      if (!srv) continue;
+      if (!srv) continue; // se arriva qualcosa di strano lo ignoro
 
       total += parseFloat(srv.price);
       serviceNames.push(srv.name);
@@ -57,62 +44,50 @@ app.post("/create-payment", async (req, res) => {
       return res.status(400).json({ error: true, message: "Servizi non validi" });
     }
 
-    const amount = total.toFixed(2);
-    const description = serviceNames.join(", ");
+    const amount = total.toFixed(2); // es: "394.00"
+    const planDescription = serviceNames.join(", ");
 
-    // CREA PAGAMENTO MOLLIE
-    const payment = await mollieClient.payments.create({
+    const payload = {
       amount: {
         currency: "EUR",
-        value: amount,
+        value: amount
       },
-      description,
-      redirectUrl: "https://tiktok-boost.com/pagamento-completato",
-      webhookUrl: "https://mollie-ghl-backend.onrender.com/webhook", // IMPORTANTISSIMO
+      description: `Pagamento servizi: ${planDescription}`,
+      redirectUrl: "https://google.com", // TODO: metti la tua thank-you page GHL
+      webhookUrl: "https://example.com/webhook-mollie", // opzionale
       metadata: {
         services: selectedServices,
-        user,
-      },
+        serviceNames,
+        source: "GHL"
+      }
+    };
+
+    const response = await axios.post(
+      "https://api.mollie.com/v2/payments",
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${MOLLIE_API_KEY}`,
+          "Content-Type": "application/json"
+        }
+      }
+    );
+
+    res.status(response.status).json(response.data);
+  } catch (err) {
+    console.error("Errore creando pagamento Mollie:", err.response?.data || err.message);
+    res.status(500).json({
+      error: true,
+      message: "Errore nel creare il pagamento",
+      details: err.response?.data || err.message
     });
-
-    return res.json({ success: true, checkoutUrl: payment.getCheckoutUrl() });
-
-  } catch (err) {
-    console.error("Errore create-payment:", err);
-    return res.status(500).json({ error: true, message: "Errore creazione pagamento" });
   }
 });
 
-// ===== WEBHOOK PAGAMENTO COMPLETATO =====
-app.post("/webhook", async (req, res) => {
-  try {
-    const paymentId = req.body.id;
-    const payment = await mollieClient.payments.get(paymentId);
-
-    if (payment.status === "paid") {
-      const meta = payment.metadata;
-
-      // INVIA DATI A GHL TRAMITE WEBHOOK
-      await fetch("https://services.leadconnectorhq.com/hooks/PtmpyXxZAdcEhKIEw8cX/webhook-trigger/bde9a7a3-9f68-49c9-bc50-713c55303b2b", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          full_name: meta.user.full_name,
-          email: meta.user.email,
-          phone: meta.user.phone,
-          purchased_services: meta.services,
-          amount: payment.amount.value,
-        }),
-      });
-    }
-
-    res.sendStatus(200);
-  } catch (err) {
-    console.error("Errore webhook:", err);
-    res.sendStatus(500);
-  }
+app.get("/", (req, res) => {
+  res.send("Mollie-GHL backend è attivo 🚀");
 });
 
-// ===== AVVIO SERVER =====
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log("Server attivo sulla porta", PORT));
+app.listen(port, () => {
+  console.log(`Server in ascolto sulla porta ${port}`);
+});
