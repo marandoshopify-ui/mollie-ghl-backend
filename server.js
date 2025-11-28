@@ -123,7 +123,7 @@ app.post(
       const ghlWebhookUrl = process.env.GHL_WEBHOOK_URL;
 
       if (!ghlWebhookUrl) {
-        console.warn("⚠️ GHL_WEBHOOK_URL non configurato nelle Environment Variables di Render");
+        console.warn("https://services.leadconnectorhq.com/hooks/PtmpyXxZAdcEhKIEw8cX/webhook-trigger/bde9a7a3-9f68-49c9-bc50-713c55303b2b");
         return;
       }
 
