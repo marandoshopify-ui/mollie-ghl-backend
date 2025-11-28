@@ -53,7 +53,7 @@ app.post("/create-payment", async (req, res) => {
         value: amount
       },
       description: `Pagamento servizi: ${planDescription}`,
-      redirectUrl: "https://google.com", // TODO: metti la tua thank-you page GHL
+      redirectUrl: "https://tiktok-boost.com/thank-you-page-page", // TODO: metti la tua thank-you page GHL
       webhookUrl: "https://example.com/webhook-mollie", // opzionale
       metadata: {
         services: selectedServices,
