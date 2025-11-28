@@ -93,7 +93,7 @@ app.post("/webhook", async (req, res) => {
       const meta = payment.metadata;
 
       // INVIA DATI A GHL TRAMITE WEBHOOK
-      await fetch("YOUR_GHL_WEBHOOK_URL_HERE", {
+      await fetch("https://services.leadconnectorhq.com/hooks/PtmpyXxZAdcEhKIEw8cX/webhook-trigger/bde9a7a3-9f68-49c9-bc50-713c55303b2b", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
