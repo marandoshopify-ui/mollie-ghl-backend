@@ -12,7 +12,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 // ===== MOLLIE CLIENT =====
 const mollieClient = createMollieClient({
-  apiKey: process.env.MOLLIE_API_KEY, // test_mAp53HbnD6hcPuze3bNtu7qBNjSHst
+  apiKey: "test_mAp53HbnD6hcPuze3bNtu7qBNjSHst"
 });
 
 // ===== CONFIG SERVIZI =====
