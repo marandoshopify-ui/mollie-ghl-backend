@@ -14,9 +14,9 @@ const GHL_WEBHOOK_URL = "https://services.leadconnectorhq.com/hooks/PtmpyXxZAdcE
 
 // Listino servizi (CODICE -> nome + prezzo)
 const SERVICES = {
-  setup: { name: "TikTok Shop MasterClass", price: "47.00" },
+  setup: { name: "TikTok Shop MasterClass", price: "17.90" },
   ads:   { name: "TOP 10 Prodotti - Dicembre", price: "9.90" },
-  call:  { name: "Account TikTok Pre-Configurato", price: "19.90" }
+  call:  { name: "Account TikTok Pre-Configurato", price: "14.90" }
 };
 
 app.use(cors());
